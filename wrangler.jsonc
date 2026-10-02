@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "syncra-frontend",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "APP_BASE_URL": "https://syncra-frontend.deeprajb012.workers.dev",
+    "AUTH0_DOMAIN": "deeprajb012.eu.auth0.com",
+    "AUTH0_CLIENT_ID": "qe4jG89cFTWaQLPRL0RNKROXOfZOIQ5O",
+    "AUTH0_AUDIENCE": "https://syncra-backend-zj6t.onrender.com",
+    "NEXT_PUBLIC_API_URL": "https://syncra-backend-zj6t.onrender.com"
+  }
+}
