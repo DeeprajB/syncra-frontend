@@ -1,19 +1,45 @@
-import { Button } from "@/components/ui/button"
+import { syncSyncraUser } from "@/lib/api"
+import { auth0 } from "@/lib/auth0"
 
-export default function Page() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>
+}) {
+  const params = await searchParams
+  const callbackError = Array.isArray(params.error) ? params.error[0] : params.error
+  const session = await auth0.getSession()
+
+  if (!session) {
+    return (
+      <main>
+        {callbackError ? <p>{callbackError}</p> : null}
+        <a href="/auth/login">Log in</a>
+      </main>
+    )
+  }
+
+  let user
+  let syncError = callbackError
+
+  try {
+    user = await syncSyncraUser()
+  } catch (error) {
+    syncError = error instanceof Error ? error.message : "Failed to sync user"
+  }
+
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <main>
+      {syncError ? <p>{syncError}</p> : null}
+      {user ? (
+        <>
+          <p>Signed in as {user.email || user.sub}</p>
+          <pre>{JSON.stringify(user, null, 2)}</pre>
+        </>
+      ) : (
+        <p>Logged in to Auth0, but the backend user was not synced.</p>
+      )}
+      <a href="/auth/logout">Log out</a>
+    </main>
   )
 }
