@@ -11,6 +11,7 @@
   "observability": {
     "enabled": true
   },
+  "keep_vars": true,
   "vars": {
     "APP_BASE_URL": "https://syncra-frontend.deeprajb012.workers.dev",
     "AUTH0_DOMAIN": "deeprajb012.eu.auth0.com",
