@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const auth0 = new Auth0Client({
+  signInReturnToPath: "/dashboard",
   authorizationParameters: {
     audience: process.env.AUTH0_AUDIENCE,
     scope: "openid profile email",
