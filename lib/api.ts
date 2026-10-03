@@ -1,8 +1,19 @@
+import { cache } from "react"
+
 import { auth0 } from "@/lib/auth0"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export async function syncSyncraUser(accessToken?: string) {
+export type SyncraUser = {
+  picture?: string
+  email?: string
+  given_name?: string
+  family_name?: string
+}
+
+export const syncSyncraUser = cache(async function syncSyncraUser(
+  accessToken?: string
+): Promise<SyncraUser> {
   const token =
     accessToken ??
     (
@@ -24,4 +35,4 @@ export async function syncSyncraUser(accessToken?: string) {
   }
 
   return response.json()
-}
+})

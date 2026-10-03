@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
-import { SiteHeader } from "@/components/site-header"
+import { DashboardShell } from "@/components/dashboard/shell"
+import { syncSyncraUser } from "@/lib/api"
 import { auth0 } from "@/lib/auth0"
 
 export default async function DashboardLayout({
@@ -14,12 +15,22 @@ export default async function DashboardLayout({
     redirect("/auth/login?returnTo=/dashboard")
   }
 
+  let picture: string | undefined
+
+  try {
+    const user = await syncSyncraUser()
+    picture = user.picture || undefined
+  } catch {
+    picture = undefined
+  }
+
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <SiteHeader />
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-10">
-        {children}
-      </div>
-    </div>
+    <DashboardShell
+      name={session.user.name}
+      email={session.user.email}
+      picture={picture}
+    >
+      {children}
+    </DashboardShell>
   )
 }
