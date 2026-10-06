@@ -11,13 +11,14 @@ export async function middleware(request: NextRequest) {
     return authResponse
   }
 
-  if (pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/invite")) {
     const session = await auth0.getSession(request)
 
     if (!session) {
-      return NextResponse.redirect(
-        new URL("/auth/login?returnTo=/dashboard", request.nextUrl.origin)
-      )
+      const returnTo = `${pathname}${request.nextUrl.search}`
+      const loginUrl = new URL("/auth/login", request.nextUrl.origin)
+      loginUrl.searchParams.set("returnTo", returnTo)
+      return NextResponse.redirect(loginUrl)
     }
   }
 

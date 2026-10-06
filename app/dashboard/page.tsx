@@ -1,16 +1,23 @@
-import { Folder, Plus, UserPlus } from "lucide-react"
+import { redirect } from "next/navigation"
+import { Folder } from "lucide-react"
 
+import { WorkspaceActions } from "@/components/dashboard/workspace-actions"
 import { FlashToast } from "@/components/flash-toast"
-import { Button } from "@/components/ui/button"
-import { syncSyncraUser } from "@/lib/api"
+import { listWorkspaces, syncSyncraUser } from "@/lib/api"
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>
+  searchParams: Promise<{
+    error?: string | string[]
+    invite?: string | string[]
+  }>
 }) {
   const params = await searchParams
-  const callbackError = Array.isArray(params.error) ? params.error[0] : params.error
+  const callbackError = Array.isArray(params.error)
+    ? params.error[0]
+    : params.error
+  const invite = Array.isArray(params.invite) ? params.invite[0] : params.invite
 
   let syncError = callbackError
 
@@ -20,8 +27,19 @@ export default async function DashboardPage({
     syncError = error instanceof Error ? error.message : "Failed to sync user"
   }
 
+  const listed = await listWorkspaces()
+
+  if (listed.ok && listed.workspaces.length > 0) {
+    const id = listed.workspaces[0].id
+    redirect(
+      invite
+        ? `/dashboard/workspaces/${id}?invite=${encodeURIComponent(invite)}`
+        : `/dashboard/workspaces/${id}`
+    )
+  }
+
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
+    <main className="flex flex-1 flex-col px-6 py-8">
       {syncError ? (
         <FlashToast
           type="error"
@@ -30,29 +48,26 @@ export default async function DashboardPage({
           clearErrorParam
         />
       ) : null}
+      {!listed.ok ? (
+        <FlashToast
+          type="error"
+          title="Couldn't load workspaces"
+          description={listed.message}
+        />
+      ) : null}
 
-      <div className="flex max-w-md flex-col items-center text-center">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#6366F1]">
-          <Folder className="size-5" />
-        </div>
-        <h1 className="mt-6 font-heading text-3xl font-bold tracking-[-0.025em] text-[#0F172A]">
-          Welcome to Syncra
-        </h1>
-        <p className="mt-3 max-w-sm text-sm leading-6 text-[#64748B] text-pretty">
-          Create or join a workspace to start collaborating with your team.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <Button className="h-9 bg-[#3B82F6] px-3 font-semibold text-white hover:bg-[#2563EB]">
-            <Plus className="size-4" />
-            Create workspace
-          </Button>
-          <Button
-            variant="outline"
-            className="h-9 border-[#E2E8F0] bg-white px-3 font-semibold text-[#0F172A] hover:bg-[#F8FAFC]"
-          >
-            <UserPlus className="size-4" />
-            Join a workspace
-          </Button>
+      <div className="flex flex-1 items-center justify-center py-8">
+        <div className="flex max-w-md flex-col items-center text-center">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#6366F1]">
+            <Folder className="size-5" />
+          </div>
+          <h1 className="mt-6 font-heading text-3xl font-bold tracking-[-0.025em] text-[#0F172A]">
+            Welcome to Syncra
+          </h1>
+          <p className="mt-3 max-w-sm text-sm leading-6 text-pretty text-[#64748B]">
+            Create or join a workspace to start collaborating with your team.
+          </p>
+          <WorkspaceActions initialInvite={invite} openJoin={Boolean(invite)} />
         </div>
       </div>
     </main>

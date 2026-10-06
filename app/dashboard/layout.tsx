@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { DashboardShell } from "@/components/dashboard/shell"
-import { syncSyncraUser } from "@/lib/api"
+import { listWorkspaces, syncSyncraUser } from "@/lib/api"
 import { auth0 } from "@/lib/auth0"
 
 export default async function DashboardLayout({
@@ -19,16 +19,19 @@ export default async function DashboardLayout({
 
   try {
     const user = await syncSyncraUser()
-    picture = user.picture || undefined
+    picture = user.picture || session.user.picture || undefined
   } catch {
     picture = undefined
   }
+
+  const listed = await listWorkspaces()
 
   return (
     <DashboardShell
       name={session.user.name}
       email={session.user.email}
       picture={picture}
+      workspaces={listed.ok ? listed.workspaces : undefined}
     >
       {children}
     </DashboardShell>
