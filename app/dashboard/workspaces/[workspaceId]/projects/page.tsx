@@ -1,27 +1,42 @@
-import { Folder } from "lucide-react"
+import { ProjectBoard } from "@/components/dashboard/project-board"
+import {
+  currentMember,
+  getWorkspace,
+  listProjects,
+  listWorkspaceMembers,
+} from "@/lib/api"
+import { canCreateProject, canManageProject } from "@/lib/projects"
 
-import { CreateProjectButton } from "@/components/dashboard/create-project-button"
+export default async function ProjectsPage({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>
+}) {
+  const { workspaceId } = await params
+  const workspaceResult = await getWorkspace(workspaceId)
+  if (!workspaceResult.ok) {
+    return null
+  }
 
-export default function ProjectsPage() {
+  const [listed, membersResult] = await Promise.all([
+    listProjects(workspaceId),
+    listWorkspaceMembers(workspaceId),
+  ])
+  const actor = await currentMember(
+    membersResult.ok ? membersResult.members : []
+  )
+
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:px-8">
-      <h1 className="font-heading text-2xl font-bold tracking-[-0.02em] text-[#0F172A]">
-        Projects
-      </h1>
-      <div className="mt-6 flex flex-col items-center rounded-2xl bg-[#F4F6FB] px-6 py-14 text-center">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#6366F1]">
-          <Folder className="size-5" />
-        </div>
-        <h2 className="mt-4 text-base font-semibold text-[#0F172A]">
-          No projects yet
-        </h2>
-        <p className="mt-1 max-w-xs text-sm leading-6 text-[#64748B]">
-          Create your first project to start organizing your team&apos;s work.
-        </p>
-        <div className="mt-5">
-          <CreateProjectButton />
-        </div>
-      </div>
+      <ProjectBoard
+        variant="page"
+        workspaceId={workspaceId}
+        workspaceTitle={workspaceResult.workspace.title}
+        projects={listed.ok ? listed.projects : []}
+        error={listed.ok ? undefined : listed.message}
+        canCreate={canCreateProject(actor?.role)}
+        canManage={canManageProject(actor?.role)}
+      />
     </main>
   )
 }

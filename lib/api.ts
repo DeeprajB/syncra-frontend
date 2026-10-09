@@ -8,7 +8,9 @@ import {
   BACKEND_ACCESS_TOKEN_HEADER,
   LOGIN_RETURN_TO_HEADER,
 } from "@/lib/auth0"
+import { readProject, readProjects } from "@/lib/projects"
 import {
+  findCurrentMember,
   readMembers,
   readWorkspace,
   readWorkspaces,
@@ -151,6 +153,55 @@ export async function listWorkspaceMembers(id: string) {
   }
 
   return { ok: true as const, members }
+}
+
+export async function listProjects(workspaceId: string) {
+  const result = await syncraFetch(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/projects`
+  )
+  if (!result.ok) {
+    return { ok: false as const, message: "Couldn't load projects." }
+  }
+
+  const projects = readProjects(result.body)
+  if (!projects) {
+    return { ok: false as const, message: "Couldn't load projects." }
+  }
+
+  return { ok: true as const, projects }
+}
+
+export async function getProject(projectId: string) {
+  const result = await syncraFetch(
+    `/api/v1/projects/${encodeURIComponent(projectId)}`
+  )
+  if (!result.ok) {
+    return { ok: false as const, status: result.status }
+  }
+
+  const project = readProject(result.body)
+  if (!project) {
+    return { ok: false as const, status: 500 }
+  }
+
+  return { ok: true as const, project }
+}
+
+export async function currentMember(members: WorkspaceMember[]) {
+  let profileId: string | undefined
+  try {
+    profileId = (await syncSyncraUser()).id
+  } catch (error) {
+    if (error instanceof SyncraAuthError) {
+      await redirectToLogin()
+    }
+  }
+
+  const session = await auth0.getSession()
+  return findCurrentMember(members, {
+    id: profileId,
+    email: session?.user.email,
+  })
 }
 
 export async function personalizeMembers(members: WorkspaceMember[]) {

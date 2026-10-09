@@ -1,19 +1,26 @@
-import { Folder } from "lucide-react"
-
-import { CreateProjectButton } from "@/components/dashboard/create-project-button"
+import { ProjectBoard } from "@/components/dashboard/project-board"
 import { InviteMembersButton } from "@/components/dashboard/invite-members-button"
 import { MemberRow } from "@/components/dashboard/member-row"
 import { Badge } from "@/components/ui/badge"
+import type { Project } from "@/lib/projects"
 import type { Workspace, WorkspaceMember } from "@/lib/workspaces"
 
 export function WorkspaceScreen({
   workspace,
   members,
   membersError,
+  projects,
+  projectsError,
+  canCreateProject,
+  canManageProject,
 }: {
   workspace: Workspace
   members: WorkspaceMember[]
   membersError?: string
+  projects: Project[]
+  projectsError?: string
+  canCreateProject: boolean
+  canManageProject: boolean
 }) {
   const memberCount = members.length
   const memberLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`
@@ -38,34 +45,19 @@ export function WorkspaceScreen({
 
       <div className="mt-8 grid items-start gap-8 @min-[640px]:grid-cols-[minmax(0,1fr)_18.5rem]">
         <section>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-[#0F172A]">Projects</h2>
-            <Badge
-              variant="outline"
-              className="h-5 min-w-5 rounded-full border-[#E2E8F0] bg-[#F8FAFC] px-1.5 text-[11px] font-semibold text-[#64748B]"
-            >
-              0
-            </Badge>
-          </div>
-          <div className="mt-3 flex flex-col items-center rounded-2xl bg-[#F4F6FB] px-6 py-14 text-center">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#6366F1]">
-              <Folder className="size-5" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-[#0F172A]">
-              No projects yet
-            </h3>
-            <p className="mt-1 max-w-xs text-sm leading-6 text-[#64748B]">
-              Create your first project to start organizing your team&apos;s
-              work.
-            </p>
-            <div className="mt-5">
-              <CreateProjectButton />
-            </div>
-          </div>
+          <ProjectBoard
+            variant="section"
+            workspaceId={workspace.id}
+            workspaceTitle={workspace.title}
+            projects={projects}
+            error={projectsError}
+            canCreate={canCreateProject}
+            canManage={canManageProject}
+          />
         </section>
 
         <aside>
-          <div className="flex items-center gap-2">
+          <div className="flex h-8 items-center gap-2">
             <h2 className="text-sm font-semibold text-[#0F172A]">Team</h2>
             <Badge
               variant="outline"
