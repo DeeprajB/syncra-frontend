@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation"
 
 import { DashboardShell } from "@/components/dashboard/shell"
-import { listWorkspaces, syncSyncraUser } from "@/lib/api"
+import {
+  listWorkspaces,
+  redirectToLogin,
+  SyncraAuthError,
+  syncSyncraUser,
+} from "@/lib/api"
 import { auth0 } from "@/lib/auth0"
 
 export default async function DashboardLayout({
@@ -20,8 +25,10 @@ export default async function DashboardLayout({
   try {
     const user = await syncSyncraUser()
     picture = user.picture || session.user.picture || undefined
-  } catch {
-    picture = undefined
+  } catch (error) {
+    if (error instanceof SyncraAuthError) {
+      await redirectToLogin()
+    }
   }
 
   const listed = await listWorkspaces()

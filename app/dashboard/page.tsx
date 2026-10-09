@@ -3,7 +3,12 @@ import { Folder } from "lucide-react"
 
 import { WorkspaceActions } from "@/components/dashboard/workspace-actions"
 import { FlashToast } from "@/components/flash-toast"
-import { listWorkspaces, syncSyncraUser } from "@/lib/api"
+import {
+  listWorkspaces,
+  redirectToLogin,
+  SyncraAuthError,
+  syncSyncraUser,
+} from "@/lib/api"
 
 export default async function DashboardPage({
   searchParams,
@@ -24,6 +29,9 @@ export default async function DashboardPage({
   try {
     await syncSyncraUser()
   } catch (error) {
+    if (error instanceof SyncraAuthError) {
+      await redirectToLogin()
+    }
     syncError = error instanceof Error ? error.message : "Failed to sync user"
   }
 

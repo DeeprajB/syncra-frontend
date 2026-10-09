@@ -1,6 +1,13 @@
+import { AccessTokenError } from "@auth0/nextjs-auth0/errors"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 import { cache } from "react"
 
-import { auth0 } from "@/lib/auth0"
+import {
+  auth0,
+  BACKEND_ACCESS_TOKEN_HEADER,
+  LOGIN_RETURN_TO_HEADER,
+} from "@/lib/auth0"
 import {
   readMembers,
   readWorkspace,
@@ -12,6 +19,47 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
+export class SyncraAuthError extends Error {
+  constructor() {
+    super("Sign in to continue.")
+    this.name = "SyncraAuthError"
+  }
+}
+
+export async function redirectToLogin() {
+  const headerStore = await headers()
+  const returnTo = safeReturnTo(headerStore.get(LOGIN_RETURN_TO_HEADER))
+  redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`)
+}
+
+function safeReturnTo(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard"
+  }
+  return value
+}
+
+async function getBackendAccessToken() {
+  const headerStore = await headers()
+  const forwarded = headerStore.get(BACKEND_ACCESS_TOKEN_HEADER)
+  if (forwarded) {
+    return forwarded
+  }
+
+  try {
+    return (
+      await auth0.getAccessToken({
+        audience: process.env.AUTH0_AUDIENCE,
+      })
+    ).token
+  } catch (error) {
+    if (error instanceof AccessTokenError) {
+      throw new SyncraAuthError()
+    }
+    throw error
+  }
+}
+
 export async function syncraFetch(path: string, init?: RequestInit) {
   const session = await auth0.getSession()
   if (!session) {
@@ -20,11 +68,7 @@ export async function syncraFetch(path: string, init?: RequestInit) {
 
   let token: string
   try {
-    token = (
-      await auth0.getAccessToken({
-        audience: process.env.AUTH0_AUDIENCE,
-      })
-    ).token
+    token = await getBackendAccessToken()
   } catch {
     return { ok: false as const, status: 401, body: null as unknown }
   }
@@ -134,13 +178,7 @@ export type SyncraUser = {
 export const syncSyncraUser = cache(async function syncSyncraUser(
   accessToken?: string
 ): Promise<SyncraUser> {
-  const token =
-    accessToken ??
-    (
-      await auth0.getAccessToken({
-        audience: process.env.AUTH0_AUDIENCE,
-      })
-    ).token
+  const token = accessToken ?? (await getBackendAccessToken())
 
   const response = await fetch(`${API_URL}/auth/me`, {
     headers: {
@@ -148,6 +186,10 @@ export const syncSyncraUser = cache(async function syncSyncraUser(
     },
     cache: "no-store",
   })
+
+  if (response.status === 401) {
+    throw new SyncraAuthError()
+  }
 
   if (!response.ok) {
     const detail = await response.text()
