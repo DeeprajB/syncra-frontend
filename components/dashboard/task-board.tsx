@@ -80,6 +80,7 @@ export function TaskBoard({
   members,
   actorId,
   role,
+  focusTaskId,
 }: {
   workspaceId: string
   workspaceTitle: string
@@ -89,6 +90,7 @@ export function TaskBoard({
   members: WorkspaceMember[]
   actorId?: string
   role?: WorkspaceRole
+  focusTaskId?: string
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -117,6 +119,18 @@ export function TaskBoard({
     status: TaskStatus
   } | null>(null)
   const [detail, setDetail] = useState<Task | null>(null)
+  const openedFocus = useRef<string | null>(null)
+  useEffect(() => {
+    if (!focusTaskId || openedFocus.current === focusTaskId) {
+      return
+    }
+    const match = tasks.find((task) => task.id === focusTaskId)
+    if (!match) {
+      return
+    }
+    openedFocus.current = focusTaskId
+    setDetail(match)
+  }, [focusTaskId, tasks])
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropIndex, setDropIndex] = useState<{
     status: TaskStatus

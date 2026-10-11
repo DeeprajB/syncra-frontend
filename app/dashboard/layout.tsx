@@ -35,13 +35,15 @@ export default async function DashboardLayout({
   const listed = await listWorkspaces()
 
   return (
-    <DashboardShell
-      name={session.user.name}
-      email={session.user.email}
-      picture={picture}
-      workspaces={listed.ok ? listed.workspaces : undefined}
-    >
-      <QueryProvider>{children}</QueryProvider>
-    </DashboardShell>
+    <QueryProvider>
+      <DashboardShell
+        name={session.user.name}
+        email={session.user.email}
+        picture={picture}
+        workspaces={listed.ok ? listed.workspaces : undefined}
+      >
+        {children}
+      </DashboardShell>
+    </QueryProvider>
   )
 }

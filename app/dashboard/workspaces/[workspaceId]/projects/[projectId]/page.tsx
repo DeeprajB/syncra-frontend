@@ -13,10 +13,13 @@ import { cn } from "@/lib/utils"
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceId: string; projectId: string }>
+  searchParams: Promise<{ task?: string }>
 }) {
   const { workspaceId, projectId } = await params
+  const { task } = await searchParams
   const workspaceResult = await getWorkspace(workspaceId)
   if (!workspaceResult.ok) {
     return null
@@ -60,6 +63,7 @@ export default async function ProjectPage({
       members={members}
       actorId={actor?.userId}
       role={actor?.role}
+      focusTaskId={task}
     />
   )
 }

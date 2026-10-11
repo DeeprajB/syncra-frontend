@@ -16,6 +16,12 @@ export const activityKeys = {
     ["workspace-activity", workspaceId] as const,
 }
 
+export const notificationKeys = {
+  all: ["notifications"] as const,
+  unread: ["notifications", "unread"] as const,
+  list: ["notifications", "list"] as const,
+}
+
 export const presenceKeys = {
   members: (workspaceId: string) => ["presence", workspaceId] as const,
   self: (workspaceId: string) => ["presence-self", workspaceId] as const,

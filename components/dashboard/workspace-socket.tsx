@@ -129,6 +129,10 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
         publishPresence(nextPresence)
         return
       }
+      if (event.type === "notification.created") {
+        queryClient.invalidateQueries({ queryKey: ["notifications"] })
+        return
+      }
       if (!isDomainEvent(event.type)) {
         return
       }
