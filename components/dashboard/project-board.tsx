@@ -325,7 +325,7 @@ function ProjectCard({
   )
 }
 
-function ProjectStatusBadge({
+export function ProjectStatusBadge({
   project,
   quiet = false,
 }: {

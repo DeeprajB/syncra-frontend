@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 
+import { QueryProvider } from "@/components/dashboard/query-provider"
 import { DashboardShell } from "@/components/dashboard/shell"
 import {
   listWorkspaces,
@@ -40,7 +41,7 @@ export default async function DashboardLayout({
       picture={picture}
       workspaces={listed.ok ? listed.workspaces : undefined}
     >
-      {children}
+      <QueryProvider>{children}</QueryProvider>
     </DashboardShell>
   )
 }

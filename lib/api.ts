@@ -9,6 +9,7 @@ import {
   LOGIN_RETURN_TO_HEADER,
 } from "@/lib/auth0"
 import { readProject, readProjects } from "@/lib/projects"
+import { readTaskPage, type Task } from "@/lib/tasks"
 import {
   findCurrentMember,
   readMembers,
@@ -185,6 +186,38 @@ export async function getProject(projectId: string) {
   }
 
   return { ok: true as const, project }
+}
+
+export async function listProjectTasks(projectId: string) {
+  const tasks: Task[] = []
+  let cursor: string | null = null
+
+  for (let page = 0; page < 40; page += 1) {
+    const params = new URLSearchParams()
+    if (cursor) {
+      params.set("cursor", cursor)
+    }
+    const query = params.size ? `?${params.toString()}` : ""
+    const result = await syncraFetch(
+      `/api/v1/projects/${encodeURIComponent(projectId)}/tasks${query}`
+    )
+    if (!result.ok) {
+      return { ok: false as const, message: "Couldn't load tasks." }
+    }
+
+    const parsed = readTaskPage(result.body)
+    if (!parsed) {
+      return { ok: false as const, message: "Couldn't load tasks." }
+    }
+
+    tasks.push(...parsed.items)
+    if (!parsed.nextCursor) {
+      return { ok: true as const, tasks }
+    }
+    cursor = parsed.nextCursor
+  }
+
+  return { ok: true as const, tasks }
 }
 
 export async function currentMember(members: WorkspaceMember[]) {

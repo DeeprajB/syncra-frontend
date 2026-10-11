@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { syncraFetch } from "@/lib/api"
+import { getProject, syncraFetch } from "@/lib/api"
 import {
   isProjectStatus,
   PROJECT_DESCRIPTION_MAX,
@@ -81,6 +81,14 @@ function failure(
 function readStatus(value: FormDataEntryValue | null): ProjectStatus | null {
   const status = String(value ?? "")
   return isProjectStatus(status) ? status : null
+}
+
+export async function loadProject(projectId: string) {
+  const result = await getProject(projectId)
+  if (!result.ok) {
+    throw new Error("Couldn't load this project.")
+  }
+  return result.project
 }
 
 export async function createProject(
