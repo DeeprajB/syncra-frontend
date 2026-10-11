@@ -9,6 +9,11 @@ import {
   LOGIN_RETURN_TO_HEADER,
 } from "@/lib/auth0"
 import { readProject, readProjects } from "@/lib/projects"
+import {
+  readWorkspaceActivityPage,
+  type WorkspaceActivity,
+} from "@/lib/activity"
+import { readCommentPage, type TaskComment } from "@/lib/comments"
 import { readTaskPage, type Task } from "@/lib/tasks"
 import {
   findCurrentMember,
@@ -218,6 +223,81 @@ export async function listProjectTasks(projectId: string) {
   }
 
   return { ok: true as const, tasks }
+}
+
+export async function listTaskComments(
+  taskId: string
+): Promise<
+  | { ok: true; available: true; comments: TaskComment[] }
+  | { ok: true; available: false; comments: [] }
+  | { ok: false; message: string }
+> {
+  const comments: TaskComment[] = []
+  let cursor: string | null = null
+
+  for (let page = 0; page < 20; page += 1) {
+    const params = new URLSearchParams({ limit: "50" })
+    if (cursor) {
+      params.set("cursor", cursor)
+    }
+    const result = await syncraFetch(
+      `/api/v1/tasks/${encodeURIComponent(taskId)}/comments?${params.toString()}`
+    )
+    if (result.status === 404) {
+      return { ok: true, available: false, comments: [] }
+    }
+    if (!result.ok) {
+      return { ok: false, message: "Couldn't load comments." }
+    }
+    const parsed = readCommentPage(result.body)
+    if (!parsed) {
+      return { ok: false, message: "Couldn't load comments." }
+    }
+    comments.push(...parsed.items)
+    if (!parsed.nextCursor) {
+      return { ok: true, available: true, comments }
+    }
+    cursor = parsed.nextCursor
+  }
+
+  return { ok: true, available: true, comments }
+}
+
+export async function listWorkspaceActivity(
+  workspaceId: string,
+  cursor?: string | null
+): Promise<
+  | {
+      ok: true
+      available: boolean
+      items: WorkspaceActivity[]
+      nextCursor: string | null
+    }
+  | { ok: false; message: string }
+> {
+  const params = new URLSearchParams({ limit: "50" })
+  if (cursor) {
+    params.set("cursor", cursor)
+  }
+  const result = await syncraFetch(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/activity?${params.toString()}`
+  )
+  if (result.status === 404) {
+    return { ok: true, available: false, items: [], nextCursor: null }
+  }
+  if (!result.ok) {
+    return { ok: false, message: "Couldn't load activity." }
+  }
+  const parsed = readWorkspaceActivityPage(result.body)
+  if (!parsed) {
+    return { ok: false, message: "Couldn't load activity." }
+  }
+  return {
+    ok: true,
+    available: true,
+    items: parsed.items,
+    nextCursor: parsed.nextCursor,
+  }
 }
 
 export async function currentMember(members: WorkspaceMember[]) {

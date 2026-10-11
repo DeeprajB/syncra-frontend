@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useTransition, type ReactNode } from "react"
+import { useEffect, useState, useTransition, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { MessageSquare, UserRound, X } from "lucide-react"
+import { UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { deleteTask, loadTaskActivity } from "@/app/dashboard/task-actions"
+import { TaskComments } from "@/components/dashboard/task-comments"
+import { useTaskViewers } from "@/components/dashboard/workspace-socket"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,8 +40,9 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/tasks"
+import { setWatchedTask } from "@/lib/realtime"
 import { cn } from "@/lib/utils"
-import type { WorkspaceMember } from "@/lib/workspaces"
+import type { WorkspaceMember, WorkspaceRole } from "@/lib/workspaces"
 
 const priorityChip: Record<TaskPriority, string> = {
   low: "bg-[#F8FAFC] text-[#64748B]",
@@ -59,20 +62,26 @@ const avatarTones = [
 const ACTIVITY_PREVIEW = 4
 
 export function TaskDetailDialog({
+  workspaceId,
   projectId,
   task,
   members,
   canEdit,
   canDelete,
+  role,
+  actorId,
   open,
   onOpenChange,
   onEdit,
 }: {
+  workspaceId: string
   projectId: string
   task: Task
   members: WorkspaceMember[]
   canEdit: boolean
   canDelete: boolean
+  role?: WorkspaceRole
+  actorId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit: () => void
@@ -90,7 +99,16 @@ export function TaskDetailDialog({
     enabled: open,
   })
   const assignee = members.find((member) => member.userId === task.assigneeId)
+  const viewers = useTaskViewers(workspaceId, task.id)
   const description = task.description?.trim() ?? ""
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    setWatchedTask(workspaceId, task.id)
+    return () => setWatchedTask(workspaceId, null)
+  }, [open, task.id, workspaceId])
   const descriptionIsLong = description.length > 180
 
   if (seenTaskId !== task.id) {
@@ -128,6 +146,12 @@ export function TaskDetailDialog({
               >
                 {showDescription ? "Show less" : "Show more"}
               </button>
+            ) : null}
+            {viewers.length > 0 ? (
+              <p className="mt-2 text-xs font-medium text-[#0891B2]">
+                {viewers.map((member) => member.name).join(", ")}{" "}
+                {viewers.length === 1 ? "is viewing" : "are viewing"}
+              </p>
             ) : null}
             <DialogClose
               render={
@@ -188,13 +212,13 @@ export function TaskDetailDialog({
                 onRetry={() => activity.refetch()}
               />
             </section>
-            <section>
-              <h3 className="text-sm font-semibold text-[#0F172A]">Comments</h3>
-              <p className="mt-2 flex items-center gap-2 text-sm text-[#94A3B8]">
-                <MessageSquare className="size-4 shrink-0" />
-                Comments are coming soon.
-              </p>
-            </section>
+            <TaskComments
+              workspaceId={workspaceId}
+              taskId={task.id}
+              canPost={canEdit}
+              role={role}
+              actorId={actorId}
+            />
           </div>
           <DialogFooter className="mx-0 mb-0 shrink-0 flex-row items-center border-[#E2E8F0] bg-white sm:justify-end">
             {canDelete ? (

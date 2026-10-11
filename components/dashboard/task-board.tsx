@@ -24,6 +24,8 @@ import { ArchiveProjectDialog } from "@/components/dashboard/project-board"
 import { ProjectFormDialog } from "@/components/dashboard/project-form-dialog"
 import { TaskDetailDialog } from "@/components/dashboard/task-detail-dialog"
 import { TaskFormDialog } from "@/components/dashboard/task-form-dialog"
+import { PersonAvatar } from "@/components/dashboard/person-avatar"
+import { useTaskViewers } from "@/components/dashboard/workspace-socket"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -440,6 +442,7 @@ export function TaskBoard({
                         >
                           {slotHere ? <DropSlot /> : null}
                           <TaskCard
+                            workspaceId={workspaceId}
                             task={task}
                             member={
                               task.assigneeId
@@ -499,11 +502,14 @@ export function TaskBoard({
 
       {detail ? (
         <TaskDetailDialog
+          workspaceId={workspaceId}
           projectId={project.id}
           task={tasks.find((task) => task.id === detail.id) ?? detail}
           members={members}
           canEdit={canEdit}
           canDelete={canDeleteTask(role, detail.createdBy, actorId)}
+          role={role}
+          actorId={actorId}
           open
           onOpenChange={(next) => {
             if (!next) {
@@ -577,6 +583,7 @@ function DropSlot() {
 }
 
 function TaskCard({
+  workspaceId,
   task,
   member,
   draggable,
@@ -585,6 +592,7 @@ function TaskCard({
   onDragStart,
   onDragEnd,
 }: {
+  workspaceId: string
   task: Task
   member?: WorkspaceMember
   draggable: boolean
@@ -594,6 +602,7 @@ function TaskCard({
   onDragEnd: () => void
 }) {
   const due = formatTaskDue(task.dueDate)
+  const viewers = useTaskViewers(workspaceId, task.id)
   const dragged = useRef(false)
 
   return (
@@ -657,6 +666,18 @@ function TaskCard({
               <span className="inline-flex items-center gap-1 text-xs text-[#64748B]">
                 <Calendar className="size-3.5" />
                 {due}
+              </span>
+            ) : null}
+            {viewers.length > 0 ? (
+              <span className="flex -space-x-1" aria-hidden>
+                {viewers.slice(0, 3).map((viewer) => (
+                  <PersonAvatar
+                    key={viewer.userId}
+                    name={viewer.name}
+                    avatarUrl={viewer.avatarUrl}
+                    className="size-6 ring-2 ring-[#06B6D4]"
+                  />
+                ))}
               </span>
             ) : null}
             {member ? <AssigneeAvatar member={member} /> : null}

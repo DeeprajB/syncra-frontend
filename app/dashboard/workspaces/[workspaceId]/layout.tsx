@@ -1,3 +1,4 @@
+import { WorkspaceSocket } from "@/components/dashboard/workspace-socket"
 import { WorkspaceUnavailable } from "@/components/dashboard/workspace-unavailable"
 import { getWorkspace } from "@/lib/api"
 
@@ -29,5 +30,10 @@ export default async function WorkspaceLayout({
     )
   }
 
-  return children
+  return (
+    <>
+      <WorkspaceSocket workspaceId={workspaceId} />
+      {children}
+    </>
+  )
 }

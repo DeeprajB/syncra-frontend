@@ -205,6 +205,18 @@ export function describeActivity(
   if (action === "task.deleted") {
     return "deleted this task"
   }
+  if (action === "comment.created") {
+    const excerpt = metadata.excerpt
+    return typeof excerpt === "string" && excerpt
+      ? `commented "${excerpt}"`
+      : "commented"
+  }
+  if (action === "comment.updated") {
+    return "edited a comment"
+  }
+  if (action === "comment.deleted") {
+    return "deleted a comment"
+  }
   return "updated this task"
 }
 
