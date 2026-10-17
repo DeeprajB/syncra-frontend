@@ -8,12 +8,16 @@ import { issueWorkspaceTicket } from "@/app/dashboard/realtime-actions"
 import { PersonAvatar } from "@/components/dashboard/person-avatar"
 import { activityKeys, commentKeys, presenceKeys, taskKeys } from "@/lib/query"
 import {
+  applyCursors,
   applyPresence,
+  bindCursorSync,
   bindWatchSync,
+  cursorTarget,
   isDomainEvent,
   readEnvelope,
   watchedTask,
   workspaceSocketUrl,
+  type PresenceCursor,
   type PresenceMember,
 } from "@/lib/realtime"
 
@@ -25,6 +29,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
   const [connection, setConnection] = useState<ConnectionState>("connecting")
   const refreshTimer = useRef<number | null>(null)
   const watched = useRef<string | null>(null)
+  const sentCursor = useRef<string | null>(null)
 
   const presence = useQuery({
     queryKey: presenceKeys.members(workspaceId),
@@ -49,6 +54,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
     let openedBefore = false
     let connecting = false
     watched.current = null
+    sentCursor.current = null
 
     function syncWatch() {
       const ws = socket
@@ -74,6 +80,29 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
       watched.current = next
     }
 
+    function syncCursor() {
+      const ws = socket
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return
+      }
+      const next = cursorTarget(workspaceId)
+      const key = next
+        ? `${next.projectId}|${next.taskId ?? ""}|${next.column ?? ""}`
+        : ""
+      if (key === sentCursor.current) {
+        return
+      }
+      ws.send(
+        JSON.stringify({
+          type: "presence.cursor",
+          project_id: next?.projectId ?? null,
+          task_id: next?.taskId ?? null,
+          column: next?.column ?? null,
+        })
+      )
+      sentCursor.current = key
+    }
+
     function scheduleRefresh() {
       if (refreshTimer.current !== null) {
         return
@@ -91,6 +120,10 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
 
     function publishPresence(members: PresenceMember[]) {
       queryClient.setQueryData(presenceKeys.members(workspaceId), members)
+    }
+
+    function publishCursors(cursors: PresenceCursor[]) {
+      queryClient.setQueryData(presenceKeys.cursors(workspaceId), cursors)
     }
 
     function handleEvent(raw: unknown) {
@@ -111,6 +144,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
         }
         openedBefore = true
         syncWatch()
+        syncCursor()
         return
       }
       if (event.type === "connection.ping") {
@@ -127,6 +161,17 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
       )
       if (nextPresence) {
         publishPresence(nextPresence)
+      }
+      const nextCursors = applyCursors(
+        queryClient.getQueryData<PresenceCursor[]>(
+          presenceKeys.cursors(workspaceId)
+        ) ?? [],
+        event
+      )
+      if (nextCursors) {
+        publishCursors(nextCursors)
+      }
+      if (nextPresence || nextCursors) {
         return
       }
       if (event.type === "notification.created") {
@@ -210,7 +255,9 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
           socket = null
         }
         watched.current = null
+        sentCursor.current = null
         publishPresence([])
+        publishCursors([])
         if (stopped) {
           return
         }
@@ -222,6 +269,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
     }
 
     const unbind = bindWatchSync(workspaceId, syncWatch)
+    const unbindCursor = bindCursorSync(workspaceId, syncCursor)
     void connect()
 
     function wake() {
@@ -241,6 +289,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
     return () => {
       stopped = true
       unbind()
+      unbindCursor()
       window.clearTimeout(timer)
       if (refreshTimer.current !== null) {
         window.clearTimeout(refreshTimer.current)
@@ -250,6 +299,7 @@ export function WorkspaceSocket({ workspaceId }: { workspaceId: string }) {
       window.removeEventListener("online", wake)
       socket?.close()
       queryClient.setQueryData(presenceKeys.members(workspaceId), [])
+      queryClient.setQueryData(presenceKeys.cursors(workspaceId), [])
     }
   }, [queryClient, router, workspaceId])
 
@@ -307,5 +357,25 @@ export function useTaskViewers(workspaceId: string, taskId: string) {
   })
   return (presence.data ?? []).filter(
     (member) => member.taskId === taskId && member.userId !== self.data
+  )
+}
+
+export function useBoardCursors(workspaceId: string, projectId: string) {
+  const cursors = useQuery({
+    queryKey: presenceKeys.cursors(workspaceId),
+    queryFn: async () => [] as PresenceCursor[],
+    initialData: [] as PresenceCursor[],
+    staleTime: Infinity,
+    enabled: false,
+  })
+  const self = useQuery({
+    queryKey: presenceKeys.self(workspaceId),
+    queryFn: async () => null as string | null,
+    initialData: null as string | null,
+    staleTime: Infinity,
+    enabled: false,
+  })
+  return (cursors.data ?? []).filter(
+    (cursor) => cursor.userId !== self.data && cursor.projectId === projectId
   )
 }

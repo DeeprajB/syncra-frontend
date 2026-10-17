@@ -100,6 +100,12 @@ export function TaskDetailDialog({
   })
   const assignee = members.find((member) => member.userId === task.assigneeId)
   const viewers = useTaskViewers(workspaceId, task.id)
+  const assigneeIsViewing = viewers.some(
+    (viewer) => viewer.userId === task.assigneeId
+  )
+  const otherViewers = viewers.filter(
+    (viewer) => viewer.userId !== task.assigneeId
+  )
   const description = task.description?.trim() ?? ""
 
   useEffect(() => {
@@ -147,10 +153,10 @@ export function TaskDetailDialog({
                 {showDescription ? "Show less" : "Show more"}
               </button>
             ) : null}
-            {viewers.length > 0 ? (
+            {otherViewers.length > 0 ? (
               <p className="mt-2 text-xs font-medium text-[#0891B2]">
-                {viewers.map((member) => member.name).join(", ")}{" "}
-                {viewers.length === 1 ? "is viewing" : "are viewing"}
+                {otherViewers.map((member) => member.name).join(", ")}{" "}
+                {otherViewers.length === 1 ? "is viewing" : "are viewing"}
               </p>
             ) : null}
             <DialogClose
@@ -193,7 +199,7 @@ export function TaskDetailDialog({
                 </span>
               </DetailItem>
               <DetailItem label="Assignee">
-                <AssigneeValue member={assignee} />
+                <AssigneeValue member={assignee} viewing={assigneeIsViewing} />
               </DetailItem>
               <DetailItem label="Schedule">
                 <ScheduleValue task={task} />
@@ -314,7 +320,13 @@ function DetailItem({
   )
 }
 
-function AssigneeValue({ member }: { member?: WorkspaceMember }) {
+function AssigneeValue({
+  member,
+  viewing,
+}: {
+  member?: WorkspaceMember
+  viewing: boolean
+}) {
   if (!member) {
     return (
       <span className="inline-flex items-center gap-2 text-[#64748B]">
@@ -328,8 +340,21 @@ function AssigneeValue({ member }: { member?: WorkspaceMember }) {
 
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
-      <MemberAvatar member={member} />
+      <span className="relative shrink-0">
+        <MemberAvatar member={member} />
+        {viewing ? (
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-[#06B6D4] ring-2 ring-white"
+          />
+        ) : null}
+      </span>
       <span className="truncate">{member.name || member.email}</span>
+      {viewing ? (
+        <span className="shrink-0 text-xs font-medium text-[#0891B2]">
+          Viewing
+        </span>
+      ) : null}
     </span>
   )
 }

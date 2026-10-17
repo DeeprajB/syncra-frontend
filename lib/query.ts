@@ -25,4 +25,5 @@ export const notificationKeys = {
 export const presenceKeys = {
   members: (workspaceId: string) => ["presence", workspaceId] as const,
   self: (workspaceId: string) => ["presence-self", workspaceId] as const,
+  cursors: (workspaceId: string) => ["presence-cursors", workspaceId] as const,
 }

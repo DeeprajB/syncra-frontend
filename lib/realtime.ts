@@ -6,6 +6,21 @@ export type PresenceMember = {
   projectId: string | null
 }
 
+export type PresenceCursor = {
+  userId: string
+  name: string
+  avatarUrl: string
+  projectId: string | null
+  taskId: string | null
+  column: string | null
+}
+
+export type CursorTarget = {
+  projectId: string
+  taskId: string | null
+  column: string | null
+}
+
 export type RealtimeEnvelope = {
   type: string
   workspaceId: string
@@ -17,6 +32,10 @@ export type RealtimeEnvelope = {
 
 const desiredTask = new Map<string, string | null>()
 const watchers = new Map<string, () => void>()
+const desiredCursor = new Map<string, CursorTarget | null>()
+const cursorSyncs = new Map<string, () => void>()
+
+const CURSOR_COLUMNS = new Set(["todo", "in_progress", "review", "done"])
 
 export function workspaceSocketUrl(workspaceId: string) {
   const api = process.env.NEXT_PUBLIC_API_URL
@@ -50,6 +69,31 @@ export function bindWatchSync(workspaceId: string, sync: () => void) {
   return () => {
     if (watchers.get(workspaceId) === sync) {
       watchers.delete(workspaceId)
+    }
+  }
+}
+
+export function setCursorTarget(
+  workspaceId: string,
+  target: CursorTarget | null
+) {
+  const current = desiredCursor.get(workspaceId) ?? null
+  if (desiredCursor.has(workspaceId) && sameCursor(current, target)) {
+    return
+  }
+  desiredCursor.set(workspaceId, target)
+  cursorSyncs.get(workspaceId)?.()
+}
+
+export function cursorTarget(workspaceId: string) {
+  return desiredCursor.get(workspaceId) ?? null
+}
+
+export function bindCursorSync(workspaceId: string, sync: () => void) {
+  cursorSyncs.set(workspaceId, sync)
+  return () => {
+    if (cursorSyncs.get(workspaceId) === sync) {
+      cursorSyncs.delete(workspaceId)
     }
   }
 }
@@ -142,6 +186,35 @@ export function applyPresence(
   return null
 }
 
+export function applyCursors(
+  cursors: PresenceCursor[],
+  event: RealtimeEnvelope
+) {
+  if (event.type === "presence.snapshot") {
+    return readSnapshotCursors(event.data.members)
+  }
+  if (event.type === "presence.left") {
+    const userId = stringValue(event.data.user_id) ?? event.actorId
+    if (!userId) {
+      return cursors
+    }
+    return cursors.filter((cursor) => cursor.userId !== userId)
+  }
+  if (event.type === "presence.cursor") {
+    const userId = stringValue(event.data.user_id) ?? event.actorId
+    if (!userId) {
+      return cursors
+    }
+    const cursor = readCursor(event.data, userId)
+    const rest = cursors.filter((item) => item.userId !== userId)
+    if (!cursor) {
+      return rest
+    }
+    return [...rest, cursor]
+  }
+  return null
+}
+
 export function isDomainEvent(type: string) {
   if (type === "task.viewing" || type === "task.stopped_viewing") {
     return false
@@ -184,6 +257,75 @@ function readPresenceMember(value: unknown): PresenceMember | null {
     taskId: stringValue(record.task_id),
     projectId: stringValue(record.project_id),
   }
+}
+
+function sameCursor(left: CursorTarget | null, right: CursorTarget | null) {
+  if (left === right) {
+    return true
+  }
+  if (!left || !right) {
+    return false
+  }
+  return (
+    left.projectId === right.projectId &&
+    left.taskId === right.taskId &&
+    left.column === right.column
+  )
+}
+
+function readSnapshotCursors(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const cursors: PresenceCursor[] = []
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue
+    }
+    const record = item as Record<string, unknown>
+    const userId = stringValue(record.user_id)
+    if (!userId) {
+      continue
+    }
+    const cursor = readCursor(
+      {
+        user_id: userId,
+        name: record.name,
+        avatar_url: record.avatar_url,
+        project_id: record.cursor_project_id,
+        task_id: record.cursor_task_id,
+        column: record.cursor_column,
+      },
+      userId
+    )
+    if (cursor) {
+      cursors.push(cursor)
+    }
+  }
+  return cursors
+}
+
+function readCursor(
+  value: Record<string, unknown>,
+  userId: string
+): PresenceCursor | null {
+  const taskId = stringValue(value.task_id)
+  const column = readColumn(value.column)
+  if (!taskId && !column) {
+    return null
+  }
+  return {
+    userId,
+    name: stringValue(value.name) ?? "Someone",
+    avatarUrl: stringValue(value.avatar_url) ?? "",
+    projectId: stringValue(value.project_id),
+    taskId,
+    column: taskId ? null : column,
+  }
+}
+
+function readColumn(value: unknown) {
+  return typeof value === "string" && CURSOR_COLUMNS.has(value) ? value : null
 }
 
 function stringValue(value: unknown) {

@@ -25,7 +25,8 @@ import { ProjectFormDialog } from "@/components/dashboard/project-form-dialog"
 import { TaskDetailDialog } from "@/components/dashboard/task-detail-dialog"
 import { TaskFormDialog } from "@/components/dashboard/task-form-dialog"
 import { PersonAvatar } from "@/components/dashboard/person-avatar"
-import { useTaskViewers } from "@/components/dashboard/workspace-socket"
+import { useBoardCursors } from "@/components/dashboard/workspace-socket"
+import { setCursorTarget, type PresenceCursor } from "@/lib/realtime"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -62,14 +63,6 @@ const priorityChip: Record<TaskPriority, string> = {
   high: "bg-[#EEF2FF] text-[#4F46E5]",
   urgent: "bg-[#FFF1F2] text-[#E11D48]",
 }
-
-const avatarTones = [
-  "bg-[#6366F1]",
-  "bg-[#0EA5E9]",
-  "bg-[#10B981]",
-  "bg-[#F59E0B]",
-  "bg-[#8B5CF6]",
-]
 
 export function TaskBoard({
   workspaceId,
@@ -119,7 +112,22 @@ export function TaskBoard({
     status: TaskStatus
   } | null>(null)
   const [detail, setDetail] = useState<Task | null>(null)
+  const cursors = useBoardCursors(workspaceId, project.id)
   const openedFocus = useRef<string | null>(null)
+  useEffect(() => {
+    if (!detail) {
+      return
+    }
+    setCursorTarget(workspaceId, {
+      projectId: project.id,
+      taskId: detail.id,
+      column: null,
+    })
+    return () => setCursorTarget(workspaceId, null)
+  }, [detail, project.id, workspaceId])
+  useEffect(() => {
+    return () => setCursorTarget(workspaceId, null)
+  }, [workspaceId])
   useEffect(() => {
     if (!focusTaskId || openedFocus.current === focusTaskId) {
       return
@@ -351,7 +359,24 @@ export function TaskBoard({
           </Button>
         </div>
       ) : (
-        <div className="relative mt-4 flex min-h-0 flex-1 flex-col">
+        <div
+          className="relative mt-4 flex min-h-0 flex-1 flex-col"
+          onPointerMove={(event) => {
+            if (detail) {
+              return
+            }
+            setCursorTarget(
+              workspaceId,
+              cursorFromPointer(event.target, project.id)
+            )
+          }}
+          onPointerLeave={() => {
+            if (detail) {
+              return
+            }
+            setCursorTarget(workspaceId, null)
+          }}
+        >
           <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {TASK_COLUMNS.map((column) => {
               const cards = visible
@@ -367,6 +392,7 @@ export function TaskBoard({
               return (
                 <section
                   key={column.value}
+                  data-presence-column={column.value}
                   className={cn(
                     "flex min-h-64 flex-col rounded-2xl p-2.5 transition-colors",
                     dropIndex?.status === column.value
@@ -401,16 +427,24 @@ export function TaskBoard({
                         {cards.length}
                       </span>
                     </h2>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        className="flex size-6 items-center justify-center rounded-md text-[#64748B] hover:bg-white"
-                        aria-label={`Add a task to ${column.label}`}
-                        onClick={() => openCreate(column.value)}
-                      >
-                        <Plus className="size-4" />
-                      </button>
-                    ) : null}
+                    <span className="flex min-w-0 items-center gap-1">
+                      <PresenceChips
+                        people={cursors.filter(
+                          (cursor) =>
+                            cursor.column === column.value && !cursor.taskId
+                        )}
+                      />
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="flex size-6 items-center justify-center rounded-md text-[#64748B] hover:bg-white"
+                          aria-label={`Add a task to ${column.label}`}
+                          onClick={() => openCreate(column.value)}
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                      ) : null}
+                    </span>
                   </div>
                   <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto">
                     {cards.map((task, index) => {
@@ -456,8 +490,10 @@ export function TaskBoard({
                         >
                           {slotHere ? <DropSlot /> : null}
                           <TaskCard
-                            workspaceId={workspaceId}
                             task={task}
+                            cursors={cursors.filter(
+                              (cursor) => cursor.taskId === task.id
+                            )}
                             member={
                               task.assigneeId
                                 ? membersById.get(task.assigneeId)
@@ -597,8 +633,8 @@ function DropSlot() {
 }
 
 function TaskCard({
-  workspaceId,
   task,
+  cursors,
   member,
   draggable,
   dragging,
@@ -606,8 +642,8 @@ function TaskCard({
   onDragStart,
   onDragEnd,
 }: {
-  workspaceId: string
   task: Task
+  cursors: PresenceCursor[]
   member?: WorkspaceMember
   draggable: boolean
   dragging: boolean
@@ -616,11 +652,11 @@ function TaskCard({
   onDragEnd: () => void
 }) {
   const due = formatTaskDue(task.dueDate)
-  const viewers = useTaskViewers(workspaceId, task.id)
   const dragged = useRef(false)
 
   return (
     <article
+      data-presence-task={task.id}
       draggable={draggable}
       onDragStart={(event) => {
         dragged.current = true
@@ -666,6 +702,7 @@ function TaskCard({
           onOpen()
         }}
       >
+        <PresenceChips people={cursors} className="mb-2" />
         <p className="text-sm leading-5 font-semibold text-[#0F172A]">
           {task.title}
         </p>
@@ -682,19 +719,14 @@ function TaskCard({
                 {due}
               </span>
             ) : null}
-            {viewers.length > 0 ? (
-              <span className="flex -space-x-1" aria-hidden>
-                {viewers.slice(0, 3).map((viewer) => (
-                  <PersonAvatar
-                    key={viewer.userId}
-                    name={viewer.name}
-                    avatarUrl={viewer.avatarUrl}
-                    className="size-6 ring-2 ring-[#06B6D4]"
-                  />
-                ))}
-              </span>
+            {member ? (
+              <PersonAvatar
+                name={member.name || member.email}
+                avatarUrl={member.avatarUrl}
+                title={member.name || member.email}
+                className="size-6"
+              />
             ) : null}
-            {member ? <AssigneeAvatar member={member} /> : null}
           </span>
         </div>
       </button>
@@ -702,30 +734,61 @@ function TaskCard({
   )
 }
 
-function AssigneeAvatar({ member }: { member: WorkspaceMember }) {
-  const [failed, setFailed] = useState(false)
-  const showPicture = Boolean(member.avatarUrl) && !failed
-  if (showPicture) {
-    return (
-      // Avatars come from the Syncra API.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={member.avatarUrl}
-        alt=""
-        className="size-6 rounded-full object-cover"
-        onError={() => setFailed(true)}
-      />
-    )
+function PresenceChips({
+  people,
+  className,
+}: {
+  people: PresenceCursor[]
+  className?: string
+}) {
+  if (people.length === 0) {
+    return null
   }
-
   return (
-    <span
-      className={`flex size-6 items-center justify-center rounded-full text-[10px] font-semibold text-white ${avatarTone(member.userId)}`}
-      title={member.name || member.email}
-    >
-      {initials(member.name, member.email)}
+    <span className={cn("flex flex-wrap items-center gap-1", className)}>
+      {people.map((person) => {
+        const name = firstName(person.name)
+        return (
+          <span
+            key={person.userId}
+            title={person.name}
+            className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-[#A5F3FC] bg-[#ECFEFF] pr-1.5 pl-0.5"
+          >
+            <PersonAvatar
+              name={person.name}
+              avatarUrl={person.avatarUrl}
+              className="size-4 text-[8px]"
+            />
+            <span className="truncate text-[11px] font-medium text-[#0E7490]">
+              {name}
+            </span>
+          </span>
+        )
+      })}
     </span>
   )
+}
+
+function firstName(name: string) {
+  const part = name.trim().split(/\s+/)[0]
+  return part || "Someone"
+}
+
+function cursorFromPointer(target: EventTarget | null, projectId: string) {
+  if (!(target instanceof Element)) {
+    return null
+  }
+  const card = target.closest("[data-presence-task]")
+  const taskId = card?.getAttribute("data-presence-task")
+  if (taskId) {
+    return { projectId, taskId, column: null }
+  }
+  const column = target.closest("[data-presence-column]")
+  const status = column?.getAttribute("data-presence-column")
+  if (status) {
+    return { projectId, taskId: null, column: status }
+  }
+  return null
 }
 
 function FilterMenu({
@@ -857,19 +920,4 @@ function applyMove(
     })
   }
   return next
-}
-
-function initials(name: string, email: string) {
-  const source = name.trim() || email.trim()
-  const parts = source.split(/[\s@._-]+/).filter(Boolean)
-  const letters = `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
-  return (letters || "S").toUpperCase()
-}
-
-function avatarTone(id: string) {
-  let hash = 0
-  for (const char of id) {
-    hash = (hash + char.charCodeAt(0)) % avatarTones.length
-  }
-  return avatarTones[hash]
 }
