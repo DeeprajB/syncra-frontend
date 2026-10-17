@@ -1,282 +1,274 @@
 import {
   Activity,
-  Kanban,
-  LayoutDashboard,
-  MessageSquare,
+  Bell,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Folder,
+  LayoutGrid,
+  Lock,
+  Plus,
+  RotateCw,
   Search,
   Settings,
+  SignalHigh,
+  UserRound,
   Users,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+import { SyncraMark } from "@/components/syncra-mark"
 import { cn } from "@/lib/utils"
 
-const members = [
-  { initials: "WJ", color: "#6366F1" },
-  { initials: "AL", color: "#3B82F6" },
-  { initials: "MK", color: "#06B6D4" },
-]
-
 const nav = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Projects", icon: Kanban, active: true },
+  { label: "Dashboard", icon: LayoutGrid },
+  { label: "Projects", icon: Folder, active: true },
   { label: "Members", icon: Users },
   { label: "Activity", icon: Activity },
+  { label: "Settings", icon: Settings },
 ]
 
-type Priority = "High" | "Medium" | "Low"
+const priorityChip = {
+  Low: "bg-[#F8FAFC] text-[#64748B]",
+  Medium: "bg-[#F1F5F9] text-[#475569]",
+  High: "bg-[#EEF2FF] text-[#4F46E5]",
+  Urgent: "bg-[#FFF1F2] text-[#E11D48]",
+}
 
-const columns: {
-  title: string
-  dot: string
-  cards: {
-    key: string
-    title: string
-    priority?: Priority
-    tag?: string
-    meta?: string
-    comments?: number
-    assignee?: string
-  }[]
-}[] = [
+const columns = [
   {
     title: "To do",
-    dot: "#94A3B8",
+    dot: "bg-[#94A3B8]",
+    count: 2,
     cards: [
+      { title: "Write the artist bios", priority: "Medium", due: "Apr 18" },
       {
-        key: "SYNC-214",
-        title: "Implement model training pipeline",
+        title: "Book the catalogue print run",
         priority: "High",
-        tag: "Model",
-        assignee: "AL",
-      },
-      {
-        key: "SYNC-218",
-        title: "Set up PyTorch training pipeline",
-        priority: "Medium",
-        tag: "Model",
-      },
-      {
-        key: "SYNC-221",
-        title: "Draft methodology section",
-        priority: "Low",
-        tag: "Report",
+        due: "Apr 12",
       },
     ],
   },
   {
     title: "In progress",
-    dot: "#3B82F6",
+    dot: "bg-[#3B82F6]",
+    count: 2,
     cards: [
       {
-        key: "SYNC-198",
-        title: "Preprocessing pipeline (SAML)",
+        title: "Design the exhibition homepage",
         priority: "High",
-        tag: "Model",
-        assignee: "WJ",
+        due: "Apr 9",
+        viewer: "Maya",
       },
       {
-        key: "SYNC-205",
-        title: "Hyperparameter sweep",
-        meta: "Tomorrow",
-        assignee: "MK",
-      },
-      {
-        key: "SYNC-209",
-        title: "Hyperparameter tuning script",
-        priority: "Medium",
-        tag: "Compute",
+        title: "Confirm the opening-night order",
+        priority: "Urgent",
+        due: "Apr 4",
       },
     ],
   },
   {
-    title: "In review",
-    dot: "#6366F1",
+    title: "Review",
+    dot: "bg-[#8B5CF6]",
+    count: 1,
     cards: [
       {
-        key: "SYNC-176",
-        title: "Write evaluation & citations section",
-        priority: "High",
-        tag: "Paper",
-        comments: 4,
+        title: "Proof the gallery floor plan",
+        priority: "Medium",
+        due: "Apr 2",
       },
     ],
   },
   {
     title: "Done",
-    dot: "#10B981",
+    dot: "bg-[#10B981]",
+    count: 1,
     cards: [
       {
-        key: "SYNC-142",
-        title: "Literature review & related work",
-        tag: "Research",
-      },
-      {
-        key: "SYNC-151",
-        title: "Configure remote environment and setup",
-        tag: "DevOps",
+        title: "Reserve the gallery weekend",
+        priority: "Low",
+        due: "Mar 20",
       },
     ],
   },
-]
-
-const priorityClass: Record<Priority, string> = {
-  High: "border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]",
-  Medium: "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]",
-  Low: "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]",
-}
+] as const
 
 export function ProductPreview() {
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[#E2E8F0] bg-white shadow-[0_20px_25px_-5px_rgba(15,23,42,0.08),0_8px_10px_-6px_rgba(15,23,42,0.04)]">
-      <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-4 py-3">
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          <span className="size-2.5 rounded-full bg-[#FF5F57]" />
-          <span className="size-2.5 rounded-full bg-[#FEBC2E]" />
-          <span className="size-2.5 rounded-full bg-[#28C840]" />
+    <figure className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_20px_25px_-5px_rgba(15,23,42,0.08),0_8px_10px_-6px_rgba(15,23,42,0.04)]">
+      <figcaption className="sr-only">
+        A browser window open on a Syncra board for a student exhibition
+        website.
+      </figcaption>
+      <div className="flex items-center gap-2 border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2">
+        <div className="flex items-center gap-1 text-[#94A3B8]" aria-hidden>
+          <ChevronLeft className="size-4" />
+          <ChevronRight className="size-4" />
+          <RotateCw className="ml-1 size-3.5" />
         </div>
-        <p className="font-mono text-[11px] text-[#475569]">
-          CS3801 · Machine Learning · Spring 2025
-        </p>
-        <p className="ml-auto flex items-center gap-1.5 text-[12px] font-medium text-[#047857]">
-          <span className="size-1.5 rounded-full bg-[#10B981]" />
-          Syncing live
-        </p>
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-[#E2E8F0] bg-white px-2.5 py-1">
+          <Lock className="size-3 shrink-0 text-[#64748B]" aria-hidden />
+          <p className="truncate font-mono text-[11px] text-[#475569]">
+            syncra.example/dashboard/workspaces/studio-4/projects/spring-exhibition
+          </p>
+        </div>
       </div>
 
-      <div className="grid min-h-[420px] md:grid-cols-[196px_1fr]">
-        <aside className="hidden flex-col border-r border-[#E2E8F0] bg-[#F8FAFC] p-3 md:flex">
-          <p className="px-2 pb-2 font-mono text-[11px] text-[#64748B]">
-            Workspace
+      <div className="border-b border-[#E2E8F0] bg-white">
+        <div className="flex h-12 items-center justify-between gap-3 px-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <SyncraMark className="size-6" />
+            <span className="font-heading text-sm font-semibold tracking-[-0.01em] text-[#0F172A]">
+              Syncra
+            </span>
+            <span className="hidden h-4 w-px bg-[#E2E8F0] sm:block" />
+            <span className="hidden h-7 items-center gap-1.5 rounded-full border border-[#E2E8F0] px-2.5 text-xs font-medium text-[#0F172A] sm:inline-flex">
+              Studio 4
+              <ChevronDown className="size-3 text-[#94A3B8]" />
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg text-[#475569]">
+              <Bell className="size-4" />
+            </span>
+            <span className="flex size-7 items-center justify-center rounded-full bg-[#6366F1] text-[10px] font-semibold text-white">
+              AR
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-[180px_1fr]">
+        <aside className="hidden border-r border-[#E2E8F0] bg-white p-3 md:block">
+          <p className="px-2 pb-2 text-[10px] font-semibold tracking-[0.08em] text-[#94A3B8] uppercase">
+            Workspace navigation
           </p>
-          <nav className="flex flex-1 flex-col gap-1">
+          <div className="flex flex-col gap-1">
             {nav.map((item) => (
               <div
                 key={item.label}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-[#475569]",
-                  item.active && "bg-[#EFF6FF] font-medium text-[#1D4ED8]"
+                  "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#475569]",
+                  item.active && "bg-[#3B82F6] text-white",
+                  item.label === "Settings" &&
+                    "mt-1 border-t border-[#E2E8F0] pt-2"
                 )}
               >
                 <item.icon className="size-4" />
                 {item.label}
               </div>
             ))}
-            <div className="mt-auto flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-[#475569]">
-              <Settings className="size-4" />
-              Settings
-            </div>
-          </nav>
+          </div>
         </aside>
 
-        <div className="flex min-w-0 flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0">
-              <p className="font-heading text-base font-semibold tracking-[-0.01em] text-[#0F172A]">
-                Machine Learning Assignment
-              </p>
-              <p className="text-[13px] text-[#64748B]">
-                Module 2 · The teamwork sprint
+        <div className="relative bg-[#f8fafc] p-4">
+          <p className="text-xs font-medium text-[#64748B]">
+            Projects
+            <span className="px-1.5 text-[#CBD5E1]">/</span>
+            <span className="text-[#475569]">Spring exhibition site</span>
+          </p>
+          <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-heading text-xl font-bold tracking-[-0.025em] text-[#0F172A]">
+                  Spring exhibition site
+                </h2>
+                <span className="inline-flex h-5 items-center gap-1.5 rounded-full bg-[#ECFDF5] px-2 text-[11px] font-medium text-[#059669]">
+                  <span className="size-1.5 rounded-full bg-[#10B981]" />
+                  Active
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Publish the schedule, artist pages, and opening-night plan.
               </p>
             </div>
-            <div className="ml-auto flex flex-wrap items-center gap-3">
-              <div className="flex h-8 items-center gap-2 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 text-[12px] text-[#94A3B8]">
-                <Search className="size-3.5" />
-                Search tasks or members
-              </div>
-              <div className="flex -space-x-2">
-                {members.map((member) => (
-                  <span
-                    key={member.initials}
-                    className="flex size-7 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-white"
-                    style={{ backgroundColor: member.color }}
-                  >
-                    {member.initials}
-                  </span>
-                ))}
-              </div>
-              <p className="flex items-center gap-1.5 text-[12px] font-medium text-[#0E7490]">
-                <span className="size-1.5 animate-pulse rounded-full bg-[#06B6D4]" />
-                3 members online
-              </p>
-            </div>
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#3B82F6] px-2.5 text-xs font-semibold text-white">
+              <Plus className="size-3.5" />
+              Create task
+            </span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-2.5 text-sm font-medium text-[#0F172A]">
+              <UserRound className="size-3.5 text-[#64748B]" />
+              Assignee
+              <ChevronDown className="size-3.5 text-[#94A3B8]" />
+            </span>
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-2.5 text-sm font-medium text-[#0F172A]">
+              <SignalHigh className="size-3.5 text-[#64748B]" />
+              Priority
+              <ChevronDown className="size-3.5 text-[#94A3B8]" />
+            </span>
+            <span className="inline-flex h-8 min-w-40 flex-1 items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-2.5 text-sm text-[#94A3B8]">
+              <Search className="size-3.5" />
+              Search tasks...
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {columns.map((column) => (
               <section
                 key={column.title}
-                className="flex min-w-0 flex-col gap-2 rounded-2xl bg-[#F8FAFC] p-2"
+                className="rounded-2xl bg-[#F1F5F9] p-2.5"
               >
-                <header className="flex items-center justify-between px-1 py-1">
-                  <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.04em] text-[#475569] uppercase">
-                    <span
-                      className="size-1.5 rounded-full"
-                      style={{ backgroundColor: column.dot }}
-                    />
-                    {column.title}
-                  </p>
-                  <span className="font-mono text-[11px] text-[#94A3B8]">
-                    {column.cards.length}
+                <h3 className="flex items-center gap-2 px-1.5 py-1 text-sm font-semibold text-[#0F172A]">
+                  <span className={cn("size-2 rounded-full", column.dot)} />
+                  {column.title}
+                  <span className="font-medium text-[#94A3B8]">
+                    {column.count}
                   </span>
-                </header>
-                {column.cards.map((card) => (
-                  <article
-                    key={card.key}
-                    className="flex flex-col gap-2 rounded-lg border border-[#E2E8F0] bg-white p-3 shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[11px] text-[#64748B]">
-                        {card.key}
-                      </span>
-                      {card.assignee ? (
-                        <span className="flex size-5 items-center justify-center rounded-full bg-[#DBEAFE] text-[9px] font-semibold text-[#1D4ED8]">
-                          {card.assignee}
+                </h3>
+                <div className="mt-2 flex flex-col gap-2">
+                  {column.cards.map((card) => (
+                    <article
+                      key={card.title}
+                      className="rounded-xl border border-[#E2E8F0] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                    >
+                      {"viewer" in card ? (
+                        <span className="mb-2 inline-flex h-5 items-center gap-1 rounded-full border border-[#A5F3FC] bg-[#ECFEFF] pr-1.5 pl-0.5">
+                          <span className="flex size-4 items-center justify-center rounded-full bg-[#06B6D4] text-[8px] font-semibold text-white">
+                            M
+                          </span>
+                          <span className="text-[11px] font-medium text-[#0E7490]">
+                            {card.viewer}
+                          </span>
                         </span>
                       ) : null}
-                    </div>
-                    <p className="text-[13px] leading-5 font-medium text-[#0F172A]">
-                      {card.title}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {card.tag ? (
-                        <Badge
-                          variant="outline"
-                          className="h-[22px] rounded-full border-[#E2E8F0] bg-[#F8FAFC] px-2 text-[11px] font-medium text-[#475569]"
-                        >
-                          {card.tag}
-                        </Badge>
-                      ) : null}
-                      {card.priority ? (
-                        <Badge
-                          variant="outline"
+                      <p className="text-sm leading-5 font-semibold text-[#0F172A]">
+                        {card.title}
+                      </p>
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        <span
                           className={cn(
-                            "h-[22px] rounded-full px-2 text-[11px] font-semibold",
-                            priorityClass[card.priority]
+                            "inline-flex h-5 items-center rounded-md px-1.5 text-[11px] font-medium",
+                            priorityChip[card.priority]
                           )}
                         >
                           {card.priority}
-                        </Badge>
-                      ) : null}
-                      {card.meta ? (
-                        <span className="text-[11px] text-[#64748B]">
-                          {card.meta}
                         </span>
-                      ) : null}
-                      {card.comments ? (
-                        <span className="ml-auto flex items-center gap-1 text-[11px] text-[#64748B]">
-                          <MessageSquare className="size-3" />
-                          {card.comments}
+                        <span className="inline-flex items-center gap-1 text-xs text-[#64748B]">
+                          <Calendar className="size-3.5" />
+                          {card.due}
                         </span>
-                      ) : null}
-                    </div>
-                  </article>
-                ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </section>
             ))}
           </div>
+
+          <div className="mt-4 flex justify-end">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white py-1 pr-1.5 pl-2.5 shadow-[0_8px_20px_-12px_rgba(15,23,42,0.45)]">
+              <span className="size-2 rounded-full bg-[#06B6D4]" />
+              <span className="text-xs font-medium text-[#475569]">Live</span>
+              <span className="flex size-6 items-center justify-center rounded-full bg-[#0EA5E9] text-[10px] font-semibold text-white ring-2 ring-[#06B6D4]">
+                M
+              </span>
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </figure>
   )
 }

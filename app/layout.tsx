@@ -19,7 +19,7 @@ const fontMono = JetBrains_Mono({
 export const metadata = {
   title: "Syncra",
   description:
-    "Syncra gives student teams one place to plan projects, manage tasks, and collaborate in real time.",
+    "Syncra is a shared workspace where a student team plans a project, moves tasks on a board, and sees what teammates are doing.",
 }
 
 export default function RootLayout({
